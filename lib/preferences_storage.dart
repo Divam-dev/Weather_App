@@ -1,0 +1,142 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'apis/geo.dart';
+import 'package:flutter/material.dart';
+
+class FileStorage {
+  static Directory? directory;
+
+  static void initialize() async {
+    if (directory != null) return;
+    directory = await getApplicationDocumentsDirectory();
+  }
+
+  static void writeFile(String filename, String filedata) async {
+    if (directory == null) return;
+
+    File file = File("${directory!.path}/$filename");
+    await file.writeAsString(filedata);
+
+    return;
+  }
+
+  static Future<String?> readFile(String filename) async {
+    if (directory == null) return null;
+
+    File file = File("${directory!.path}/$filename");
+    String data = await file.readAsString();
+
+    return data;
+  }
+
+  static const String DAILY_FILE = "dailyWeather.json";
+  static const String HOURLY_FILE = "hourlyWeather.json";
+  static const String CURRENT_FILE = "currentWeather.json";
+}
+
+class PreferencesStorage {
+  static SharedPreferences? preferences;
+
+  static Future initialize() async {
+    if (preferences != null) return;
+    preferences = await SharedPreferences.getInstance();
+  }
+
+  static Future writeString(String preference, String data) async {
+    if (preferences == null) return;
+    preferences!.setString(preference, data);
+  }
+
+  static Future writeDouble(String preference, double data) async {
+    if (preferences == null) return;
+    preferences!.setDouble(preference, data);
+  }
+
+  static Future writeInteger(String preference, int data) async {
+    if (preferences == null) return;
+    preferences!.setInt(preference, data);
+  }
+
+  static Future writeBoolean(String preference, bool data) async {
+    if (preferences == null) return;
+    preferences!.setBool(preference, data);
+  }
+
+  static Future<String?> readString(String preference) async {
+    if (preferences == null) return "";
+    return preferences!.getString(preference);
+  }
+
+  static Future<double?> readDouble(String preference) async {
+    if (preferences == null) return double.negativeInfinity;
+    return preferences!.getDouble(preference);
+  }
+
+  static Future<int?> readInteger(String preference) async {
+    if (preferences == null) return null;
+    return preferences!.getInt(preference);
+  }
+
+  static Future<bool?> readBoolean(String preference) async {
+    if (preferences == null) return null;
+    return preferences!.getBool(preference);
+  }
+
+  static Future drop(String preference) async {
+    if (preferences == null) return null;
+    await preferences!.remove(preference);
+  }
+
+  static const String GEO_LAT = "geolat";
+  static const String GEO_LON = "geolon";
+  static const String GEO_CITY = "geocity";
+  static const String GEO_FULLNAME = "geofullname";
+  static const String GEO_LAST_LOAD = "geolastload";
+  static const String THEME_MODE = "theme_mode";
+
+  static Future<void> storeGeo(Geo geo, DateTime time) async {
+    await PreferencesStorage.initialize();
+
+    if (await PreferencesStorage.readBoolean(
+                SettingPreferences.DONT_OVERWRITE_LOCATION) ==
+            true &&
+        await PreferencesStorage.readInteger(
+                PreferencesStorage.GEO_LAST_LOAD) !=
+            null) return;
+
+    await PreferencesStorage.writeString(
+        PreferencesStorage.GEO_CITY, geo.city ?? "");
+    await PreferencesStorage.writeString(
+        PreferencesStorage.GEO_FULLNAME, geo.fullName ?? "");
+    await PreferencesStorage.writeDouble(PreferencesStorage.GEO_LAT, geo.lat);
+    await PreferencesStorage.writeDouble(PreferencesStorage.GEO_LON, geo.lon);
+    await PreferencesStorage.writeInteger(
+        PreferencesStorage.GEO_LAST_LOAD, time.millisecondsSinceEpoch);
+  }
+
+  static Future<void> setThemeMode(ThemeMode themeMode) async {
+    await PreferencesStorage.initialize();
+    preferences!.setString(THEME_MODE, themeMode.toString().split('.').last);
+  }
+
+  static Future<ThemeMode> getThemeMode() async {
+    await PreferencesStorage.initialize();
+    String? themeMode = preferences!.getString(THEME_MODE);
+    switch (themeMode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+}
+
+class SettingPreferences {
+  static const String USE_GPS_DEFAULT = "gpsdefault";
+  static const String DONT_OVERWRITE_LOCATION = "keeplocation";
+  static const String SHOW_COLOR_BACKGROUND = "colorbackground";
+}
